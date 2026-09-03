@@ -430,3 +430,158 @@ button:hover {
     padding: 20px 14px;
   }
 }
+#settingsButton {
+  margin-left: 0;
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+}
+
+.settings-overlay.open {
+  display: flex;
+}
+
+.settings-panel {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid #26333b;
+  border-radius: 18px;
+  background: #0e151a;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.45);
+  padding: 24px;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.settings-header h2 {
+  margin: 0;
+  color: #d8ffe1;
+  font-size: 22px;
+}
+
+.settings-header p {
+  margin: 8px 0 0;
+  color: #8b9aa5;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.settings-close-button {
+  border: none;
+  background: transparent;
+  color: #8b9aa5;
+  font-size: 26px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.settings-close-button:hover {
+  color: #ffffff;
+}
+
+.settings-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #1d252b;
+}
+
+.settings-section:last-of-type {
+  border-bottom: none;
+}
+
+.settings-section h3 {
+  margin: 0 0 14px;
+  color: #b8c5cc;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.memory-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  color: #8b9aa5;
+  font-size: 13px;
+}
+
+.memory-stat strong {
+  color: #d8ffe1;
+  font-size: 14px;
+}
+
+.settings-action-button {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid #26333b;
+  border-radius: 10px;
+  background: #10191e;
+  color: #b8c5cc;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.settings-action-button:hover {
+  background: #18272a;
+  border-color: #3b6650;
+  color: #d8ffe1;
+}
+
+.danger-action {
+  border-color: #593838;
+  color: #ffb0b0;
+}
+
+.danger-action:hover {
+  background: #2a1717;
+  border-color: #8d4b4b;
+  color: #ffcccc;
+}
+
+.settings-note {
+  margin: 0;
+  color: #788892;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.settings-footer {
+  margin-top: 8px;
+}
+
+@media (max-width: 480px) {
+  .settings-overlay {
+    padding: 12px;
+  }
+
+  .settings-panel {
+    padding: 20px;
+    border-radius: 15px;
+  }
+
+  .settings-header h2 {
+    font-size: 20px;
+  }
+}
