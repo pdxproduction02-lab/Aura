@@ -282,3 +282,151 @@ button:hover {
     transform: translateY(-3px);
   }
 }
+.workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.history-panel {
+  width: 250px;
+  flex-shrink: 0;
+  padding: 20px 14px;
+  border-right: 1px solid #1d252b;
+  background: #0a0f13;
+  overflow-y: auto;
+}
+
+.history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 0 8px;
+  color: #8b9aa5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #aebbc2;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.conversation-item:hover {
+  background: #111b20;
+  border-color: #26333b;
+}
+
+.conversation-item.active {
+  background: #16251e;
+  border-color: #2b5139;
+  color: #d8ffe1;
+}
+
+.conversation-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.delete-conversation {
+  border: none;
+  background: transparent;
+  color: #66757e;
+  font-size: 17px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.delete-conversation:hover {
+  color: #ffaaaa;
+}
+
+.history-empty {
+  padding: 20px 8px;
+  color: #66757e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workspace main {
+  flex: 1;
+  min-width: 0;
+  max-width: 760px;
+  width: 100%;
+  margin: auto;
+  padding: 32px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-history-bar {
+  display: none;
+}
+
+.mobile-close-button {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .history-panel {
+    display: none;
+    position: fixed;
+    z-index: 10;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 280px;
+    box-shadow: 8px 0 30px rgba(0, 0, 0, 0.35);
+  }
+
+  .history-panel.open {
+    display: block;
+  }
+
+  .mobile-history-bar {
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  .history-toggle-button {
+    padding: 8px 11px;
+    border: 1px solid #26333b;
+    border-radius: 8px;
+    background: #10171c;
+    color: #aebbc2;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  .mobile-close-button {
+    display: block;
+    border: none;
+    background: transparent;
+    color: #8b9aa5;
+    font-size: 22px;
+    cursor: pointer;
+  }
+
+  .workspace main {
+    padding: 20px 14px;
+  }
+}
