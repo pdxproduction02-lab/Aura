@@ -9,7 +9,15 @@ const conversationList = document.getElementById("conversationList");
 const historyPanel = document.querySelector(".history-panel");
 const openHistoryButton = document.getElementById("openHistoryButton");
 const closeHistoryButton = document.getElementById("closeHistoryButton");
+const settingsButton = document.getElementById("settingsButton");
+const settingsModal = document.getElementById("settingsModal");
+const closeSettingsButton = document.getElementById("closeSettingsButton");
+const settingsClearButton = document.getElementById("settingsClearButton");
+const exportButton = document.getElementById("exportButton");
+const importInput = document.getElementById("importInput");
 
+const conversationCount = document.getElementById("conversationCount");
+const storageSize = document.getElementById("storageSize");
 const STORAGE_KEY = "aura_conversations";
 const OLD_STORAGE_KEY = "aura_conversation";
 
@@ -72,6 +80,104 @@ function saveConversations() {
     STORAGE_KEY,
     JSON.stringify(conversations)
   );
+
+  updateMemoryStats();
+}
+function updateMemoryStats() {
+  conversationCount.textContent = conversations.length;
+
+  const savedData = localStorage.getItem(STORAGE_KEY) || "";
+  const sizeInKB = new Blob([savedData]).size / 1024;
+
+  storageSize.textContent =
+    sizeInKB < 1
+      ? `${Math.round(sizeInKB * 1024)} bytes`
+      : `${sizeInKB.toFixed(1)} KB`;
+}
+
+function openSettings() {
+  updateMemoryStats();
+
+  settingsModal.classList.add("open");
+  settingsModal.setAttribute("aria-hidden", "false");
+}
+
+function closeSettings() {
+  settingsModal.classList.remove("open");
+  settingsModal.setAttribute("aria-hidden", "true");
+}
+
+function exportConversations() {
+  const backup = {
+    app: "AURA",
+    version: "0.4.4",
+    exportedAt: new Date().toISOString(),
+    conversations: conversations,
+  };
+
+  const blob = new Blob(
+    [JSON.stringify(backup, null, 2)],
+    { type: "application/json" }
+  );
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `aura-conversations-${Date.now()}.json`;
+  link.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function importConversations(file) {
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    try {
+      const backup = JSON.parse(reader.result);
+
+      if (
+        !backup ||
+        !Array.isArray(backup.conversations)
+      ) {
+        throw new Error("Invalid backup format");
+      }
+
+      const validConversations = backup.conversations.filter(
+        (conversation) =>
+          conversation &&
+          typeof conversation.id === "string" &&
+          Array.isArray(conversation.messages)
+      );
+
+      if (validConversations.length === 0) {
+        throw new Error("No valid conversations found");
+      }
+
+      const confirmed = confirm(
+        "Importing will replace your current local conversations. Continue?"
+      );
+
+      if (!confirmed) return;
+
+      conversations = validConversations;
+      saveConversations();
+
+      activeConversationId = conversations[0]?.id || null;
+
+      renderConversationList();
+      renderMessages();
+      updateMemoryStats();
+
+      alert("Conversations imported successfully.");
+    } catch (error) {
+      console.error("Import failed:", error);
+      alert("This file is not a valid AURA backup.");
+    }
+  };
+
+  reader.readAsText(file);
 }
 
 function getActiveConversation() {
@@ -603,3 +709,50 @@ if (conversations.length > 0) {
 
 renderConversationList();
 renderMessages();
+settingsButton.addEventListener("click", openSettings);
+
+closeSettingsButton.addEventListener("click", closeSettings);
+
+settingsModal.addEventListener("click", (event) => {
+  if (event.target === settingsModal) {
+    closeSettings();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeSettings();
+  }
+});
+
+exportButton.addEventListener("click", exportConversations);
+
+importInput.addEventListener("change", (event) => {
+  const file = event.target.files[0];
+
+  if (file) {
+    importConversations(file);
+  }
+
+  importInput.value = "";
+});
+
+settingsClearButton.addEventListener("click", () => {
+  const confirmed = confirm(
+    "Delete ALL conversations permanently from this browser?"
+  );
+
+  if (!confirmed) return;
+
+  conversations = [];
+  activeConversationId = null;
+
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(OLD_STORAGE_KEY);
+
+  renderConversationList();
+  renderMessages();
+  updateMemoryStats();
+  closeSettings();
+  input.focus();
+});
