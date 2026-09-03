@@ -7,6 +7,7 @@ const clearMemoryButton = document.getElementById("clearMemoryButton");
 
 const STORAGE_KEY = "aura_conversation";
 let messages = loadMessages();
+let isGenerating = false;
 
 function loadMessages() {
   try {
@@ -22,12 +23,8 @@ function saveMessages() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
 }
 
-/*
-  Escape HTML before applying formatting.
-  This prevents AI responses from inserting unwanted HTML.
-*/
 function escapeHTML(text) {
-  return text
+  return String(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -36,48 +33,29 @@ function escapeHTML(text) {
 }
 
 function formatMarkdown(text) {
-  let html = escapeHTML(String(text));
+  let html = escapeHTML(text);
 
-  // Code blocks
   html = html.replace(
     /```([\s\S]*?)```/g,
     '<pre class="code-block"><code>$1</code></pre>'
   );
 
-  // Inline code
   html = html.replace(
     /`([^`\n]+)`/g,
     '<code class="inline-code">$1</code>'
   );
 
-  // Headings
-  html = html.replace(
-    /^### (.*)$/gm,
-    "<h4>$1</h4>"
-  );
+  html = html.replace(/^### (.*)$/gm, "<h4>$1</h4>");
+  html = html.replace(/^## (.*)$/gm, "<h3>$1</h3>");
+  html = html.replace(/^# (.*)$/gm, "<h2>$1</h2>");
 
-  html = html.replace(
-    /^## (.*)$/gm,
-    "<h3>$1</h3>"
-  );
-
-  html = html.replace(
-    /^# (.*)$/gm,
-    "<h2>$1</h2>"
-  );
-
-  // Bold and italic
-  html = html.replace(
-    /\*\*(.*?)\*\*/g,
-    "<strong>$1</strong>"
-  );
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
   html = html.replace(
     /(?<!\*)\*([^*\n]+)\*(?!\*)/g,
     "<em>$1</em>"
   );
 
-  // Unordered lists
   html = html.replace(
     /^(?:[-*] .*(?:\n|$))+/gm,
     (block) => {
@@ -92,7 +70,6 @@ function formatMarkdown(text) {
     }
   );
 
-  // Ordered lists
   html = html.replace(
     /^(?:\d+\. .*(?:\n|$))+/gm,
     (block) => {
@@ -107,17 +84,14 @@ function formatMarkdown(text) {
     }
   );
 
-  // Paragraph line breaks
   html = html.replace(/\n/g, "<br>");
-
-  // Avoid excessive breaks around block elements
   html = html.replace(/(<\/(?:h2|h3|h4|ul|ol|pre)>)<br>/g, "$1");
   html = html.replace(/<br>(<(?:h2|h3|h4|ul|ol|pre)>)/g, "$1");
 
   return html;
 }
 
-function createMessageElement(message, index) {
+function createMessageElement(message) {
   const messageElement = document.createElement("div");
 
   messageElement.className =
@@ -130,6 +104,9 @@ function createMessageElement(message, index) {
     responseContent.className = "response-content";
     responseContent.innerHTML = formatMarkdown(message.content);
 
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+
     const copyButton = document.createElement("button");
     copyButton.className = "copy-button";
     copyButton.textContent = "Copy";
@@ -137,7 +114,6 @@ function createMessageElement(message, index) {
     copyButton.addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(message.content);
-
         copyButton.textContent = "Copied ✓";
 
         setTimeout(() => {
@@ -149,8 +125,10 @@ function createMessageElement(message, index) {
       }
     });
 
+    actions.appendChild(copyButton);
+
     messageElement.appendChild(responseContent);
-    messageElement.appendChild(copyButton);
+    messageElement.appendChild(actions);
   } else {
     messageElement.textContent = message.content;
   }
@@ -161,23 +139,174 @@ function createMessageElement(message, index) {
 function renderMessages() {
   chat.innerHTML = "";
 
-  if (messages.length > 0) {
-    welcome.style.display = "none";
-  } else {
-    welcome.style.display = "block";
-  }
+  welcome.style.display =
+    messages.length > 0 ? "none" : "block";
 
-  messages.forEach((message, index) => {
-    chat.appendChild(createMessageElement(message, index));
+  messages.forEach((message) => {
+    chat.appendChild(createMessageElement(message));
   });
 
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function createThinkingElement() {
+  const thinking = document.createElement("div");
+
+  thinking.className = "message ai thinking-message";
+
+  thinking.innerHTML = `
+    <span>AURA is thinking</span>
+    <span class="thinking-dots">
+      <span></span>
+      <span></span>
+      <span></span>
+    </span>
+  `;
+
+  return thinking;
+}
+
+function createTypingElement() {
+  const messageElement = document.createElement("div");
+  messageElement.className = "message ai";
+
+  const responseContent = document.createElement("div");
+  responseContent.className = "response-content";
+
+  messageElement.appendChild(responseContent);
+
+  return {
+    messageElement,
+    responseContent,
+  };
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+async function typeResponse(element, text) {
+  let currentText = "";
+
+  for (let index = 0; index < text.length; index++) {
+    currentText += text[index];
+
+    element.innerHTML = formatMarkdown(currentText);
+
+    chat.scrollTop = chat.scrollHeight;
+
+    // Faster typing for long responses
+    const typingDelay = text.length > 500 ? 4 : 12;
+
+    await delay(typingDelay);
+  }
+}
+
+async function requestAURA() {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messages: messages,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Something went wrong");
+  }
+
+  return data.reply || "I didn't receive a response.";
+}
+
+async function generateResponse() {
+  if (isGenerating) return;
+
+  isGenerating = true;
+  input.disabled = true;
+
+  const thinkingElement = createThinkingElement();
+  chat.appendChild(thinkingElement);
+  chat.scrollTop = chat.scrollHeight;
+
+  try {
+    const reply = await requestAURA();
+
+    thinkingElement.remove();
+
+    const typing = createTypingElement();
+    chat.appendChild(typing.messageElement);
+
+    await typeResponse(typing.responseContent, reply);
+
+    messages.push({
+      role: "model",
+      content: reply,
+    });
+
+    saveMessages();
+
+    // Add Copy button after typing finishes
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+
+    const copyButton = document.createElement("button");
+    copyButton.className = "copy-button";
+    copyButton.textContent = "Copy";
+
+    copyButton.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(reply);
+        copyButton.textContent = "Copied ✓";
+
+        setTimeout(() => {
+          copyButton.textContent = "Copy";
+        }, 1500);
+      } catch (error) {
+        copyButton.textContent = "Copy failed";
+      }
+    });
+
+    actions.appendChild(copyButton);
+    typing.messageElement.appendChild(actions);
+
+    // Add Regenerate button
+    const regenerateButton = document.createElement("button");
+    regenerateButton.className = "copy-button";
+    regenerateButton.textContent = "Regenerate";
+
+    regenerateButton.addEventListener("click", regenerateLastResponse);
+
+    actions.appendChild(regenerateButton);
+
+  } catch (error) {
+    console.error("AURA error:", error);
+
+    thinkingElement.remove();
+
+    const errorElement = document.createElement("div");
+    errorElement.className = "message ai";
+    errorElement.textContent =
+      "Sorry, AURA couldn't connect to her AI brain.";
+
+    chat.appendChild(errorElement);
+  }
+
+  isGenerating = false;
+  input.disabled = false;
+  input.focus();
   chat.scrollTop = chat.scrollHeight;
 }
 
 async function sendMessage() {
   const text = input.value.trim();
 
-  if (!text) return;
+  if (!text || isGenerating) return;
 
   welcome.style.display = "none";
 
@@ -190,60 +319,25 @@ async function sendMessage() {
   renderMessages();
 
   input.value = "";
-  input.disabled = true;
 
-  const aiMessage = document.createElement("div");
-  aiMessage.className = "message ai";
-  aiMessage.textContent = "Thinking...";
-  chat.appendChild(aiMessage);
+  await generateResponse();
+}
 
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messages: messages,
-      }),
-    });
+async function regenerateLastResponse() {
+  if (isGenerating) return;
 
-    const data = await response.json();
+  const lastMessage = messages[messages.length - 1];
 
-    if (!response.ok) {
-      throw new Error(data.error || "Something went wrong");
-    }
-
-    const reply = data.reply || "I didn't receive a response.";
-
-    messages.push({
-      role: "model",
-      content: reply,
-    });
-
-    saveMessages();
-
-    // Replace thinking state with formatted response
-    aiMessage.remove();
-    chat.appendChild(createMessageElement({
-      role: "model",
-      content: reply,
-    }));
-
-  } catch (error) {
-    console.error("AURA error:", error);
-
-    messages.pop();
-    saveMessages();
-
-    aiMessage.textContent =
-      "Sorry, AURA couldn't connect to her AI brain.";
+  if (!lastMessage || lastMessage.role !== "model") {
+    return;
   }
 
-  input.disabled = false;
-  input.focus();
+  // Remove the previous AI response
+  messages.pop();
+  saveMessages();
+  renderMessages();
 
-  chat.scrollTop = chat.scrollHeight;
+  await generateResponse();
 }
 
 newChatButton.addEventListener("click", () => {
