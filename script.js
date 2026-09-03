@@ -5,22 +5,98 @@ const welcome = document.getElementById("welcome");
 const newChatButton = document.getElementById("newChatButton");
 const clearMemoryButton = document.getElementById("clearMemoryButton");
 
-const STORAGE_KEY = "aura_conversation";
-let messages = loadMessages();
+const conversationList = document.getElementById("conversationList");
+const historyPanel = document.querySelector(".history-panel");
+const openHistoryButton = document.getElementById("openHistoryButton");
+const closeHistoryButton = document.getElementById("closeHistoryButton");
+
+const STORAGE_KEY = "aura_conversations";
+const OLD_STORAGE_KEY = "aura_conversation";
+
+let conversations = loadConversations();
+let activeConversationId = null;
 let isGenerating = false;
 
-function loadMessages() {
+function createId() {
+  return crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()}`;
+}
+
+function createConversation() {
+  return {
+    id: createId(),
+    title: "New Conversation",
+    messages: [],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+}
+
+function loadConversations() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
+
+    if (saved) {
+      const parsed = JSON.parse(saved);
+
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+
+    // Migrate the previous single-chat memory
+    const oldMessages = localStorage.getItem(OLD_STORAGE_KEY);
+
+    if (oldMessages) {
+      const messages = JSON.parse(oldMessages);
+
+      if (Array.isArray(messages) && messages.length > 0) {
+        const migrated = createConversation();
+        migrated.messages = messages;
+        migrated.title = getConversationTitle(messages);
+
+        return [migrated];
+      }
+    }
+
+    return [];
   } catch (error) {
-    console.error("Could not load conversation:", error);
+    console.error("Could not load conversations:", error);
     return [];
   }
 }
 
-function saveMessages() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+function saveConversations() {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(conversations)
+  );
+}
+
+function getActiveConversation() {
+  return conversations.find(
+    (conversation) =>
+      conversation.id === activeConversationId
+  );
+}
+
+function getConversationTitle(messages) {
+  const firstUserMessage = messages.find(
+    (message) => message.role === "user"
+  );
+
+  if (!firstUserMessage) {
+    return "New Conversation";
+  }
+
+  const title = firstUserMessage.content
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return title.length > 32
+    ? `${title.slice(0, 32)}…`
+    : title;
 }
 
 function escapeHTML(text) {
@@ -49,7 +125,10 @@ function formatMarkdown(text) {
   html = html.replace(/^## (.*)$/gm, "<h3>$1</h3>");
   html = html.replace(/^# (.*)$/gm, "<h2>$1</h2>");
 
-  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(
+    /\*\*(.*?)\*\*/g,
+    "<strong>$1</strong>"
+  );
 
   html = html.replace(
     /(?<!\*)\*([^*\n]+)\*(?!\*)/g,
@@ -120,7 +199,6 @@ function createMessageElement(message) {
           copyButton.textContent = "Copy";
         }, 1500);
       } catch (error) {
-        console.error("Copy failed:", error);
         copyButton.textContent = "Copy failed";
       }
     });
@@ -139,6 +217,9 @@ function createMessageElement(message) {
 function renderMessages() {
   chat.innerHTML = "";
 
+  const conversation = getActiveConversation();
+  const messages = conversation ? conversation.messages : [];
+
   welcome.style.display =
     messages.length > 0 ? "none" : "block";
 
@@ -147,6 +228,114 @@ function renderMessages() {
   });
 
   chat.scrollTop = chat.scrollHeight;
+}
+
+function renderConversationList() {
+  conversationList.innerHTML = "";
+
+  if (conversations.length === 0) {
+    conversationList.innerHTML = `
+      <div class="history-empty">
+        Your conversations will appear here.
+      </div>
+    `;
+    return;
+  }
+
+  const sortedConversations = [...conversations].sort(
+    (a, b) => b.updatedAt - a.updatedAt
+  );
+
+  sortedConversations.forEach((conversation) => {
+    const item = document.createElement("div");
+    item.className = "conversation-item";
+
+    if (conversation.id === activeConversationId) {
+      item.classList.add("active");
+    }
+
+    const title = document.createElement("span");
+    title.className = "conversation-title";
+    title.textContent = conversation.title;
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-conversation";
+    deleteButton.textContent = "×";
+    deleteButton.title = "Delete conversation";
+
+    deleteButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      deleteConversation(conversation.id);
+    });
+
+    item.appendChild(title);
+    item.appendChild(deleteButton);
+
+    item.addEventListener("click", () => {
+      switchConversation(conversation.id);
+    });
+
+    conversationList.appendChild(item);
+  });
+}
+
+function startNewConversation() {
+  const conversation = createConversation();
+
+  conversations.push(conversation);
+  activeConversationId = conversation.id;
+
+  saveConversations();
+  renderConversationList();
+  renderMessages();
+
+  input.focus();
+}
+
+function switchConversation(id) {
+  if (isGenerating) return;
+
+  activeConversationId = id;
+
+  renderConversationList();
+  renderMessages();
+
+  historyPanel.classList.remove("open");
+  input.focus();
+}
+
+function deleteConversation(id) {
+  const conversation = conversations.find(
+    (item) => item.id === id
+  );
+
+  if (!conversation) return;
+
+  const confirmed = confirm(
+    `Delete "${conversation.title}"?`
+  );
+
+  if (!confirmed) return;
+
+  conversations = conversations.filter(
+    (item) => item.id !== id
+  );
+
+  if (activeConversationId === id) {
+    activeConversationId = null;
+
+    if (conversations.length > 0) {
+      const latest = [...conversations].sort(
+        (a, b) => b.updatedAt - a.updatedAt
+      )[0];
+
+      activeConversationId = latest.id;
+    }
+  }
+
+  saveConversations();
+  renderConversationList();
+  renderMessages();
 }
 
 function createThinkingElement() {
@@ -197,7 +386,6 @@ async function typeResponse(element, text) {
 
     chat.scrollTop = chat.scrollHeight;
 
-    // Faster typing for long responses
     const typingDelay = text.length > 500 ? 4 : 12;
 
     await delay(typingDelay);
@@ -205,13 +393,15 @@ async function typeResponse(element, text) {
 }
 
 async function requestAURA() {
+  const conversation = getActiveConversation();
+
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      messages: messages,
+      messages: conversation.messages,
     }),
   });
 
@@ -226,6 +416,10 @@ async function requestAURA() {
 
 async function generateResponse() {
   if (isGenerating) return;
+
+  const conversation = getActiveConversation();
+
+  if (!conversation) return;
 
   isGenerating = true;
   input.disabled = true;
@@ -244,14 +438,16 @@ async function generateResponse() {
 
     await typeResponse(typing.responseContent, reply);
 
-    messages.push({
+    conversation.messages.push({
       role: "model",
       content: reply,
     });
 
-    saveMessages();
+    conversation.updatedAt = Date.now();
 
-    // Add Copy button after typing finishes
+    saveConversations();
+    renderConversationList();
+
     const actions = document.createElement("div");
     actions.className = "message-actions";
 
@@ -272,17 +468,19 @@ async function generateResponse() {
       }
     });
 
-    actions.appendChild(copyButton);
-    typing.messageElement.appendChild(actions);
-
-    // Add Regenerate button
     const regenerateButton = document.createElement("button");
     regenerateButton.className = "copy-button";
     regenerateButton.textContent = "Regenerate";
 
-    regenerateButton.addEventListener("click", regenerateLastResponse);
+    regenerateButton.addEventListener(
+      "click",
+      regenerateLastResponse
+    );
 
+    actions.appendChild(copyButton);
     actions.appendChild(regenerateButton);
+
+    typing.messageElement.appendChild(actions);
 
   } catch (error) {
     console.error("AURA error:", error);
@@ -308,14 +506,26 @@ async function sendMessage() {
 
   if (!text || isGenerating) return;
 
-  welcome.style.display = "none";
+  let conversation = getActiveConversation();
 
-  messages.push({
+  if (!conversation) {
+    startNewConversation();
+    conversation = getActiveConversation();
+  }
+
+  conversation.messages.push({
     role: "user",
     content: text,
   });
 
-  saveMessages();
+  conversation.title = getConversationTitle(
+    conversation.messages
+  );
+
+  conversation.updatedAt = Date.now();
+
+  saveConversations();
+  renderConversationList();
   renderMessages();
 
   input.value = "";
@@ -326,46 +536,55 @@ async function sendMessage() {
 async function regenerateLastResponse() {
   if (isGenerating) return;
 
-  const lastMessage = messages[messages.length - 1];
+  const conversation = getActiveConversation();
+
+  if (!conversation) return;
+
+  const lastMessage =
+    conversation.messages[conversation.messages.length - 1];
 
   if (!lastMessage || lastMessage.role !== "model") {
     return;
   }
 
-  // Remove the previous AI response
-  messages.pop();
-  saveMessages();
+  conversation.messages.pop();
+
+  saveConversations();
   renderMessages();
 
   await generateResponse();
 }
 
 newChatButton.addEventListener("click", () => {
-  if (messages.length === 0) return;
+  if (isGenerating) return;
 
-  const confirmed = confirm(
-    "Start a new conversation? Your current conversation will remain saved."
-  );
-
-  if (!confirmed) return;
-
-  messages.length = 0;
-  renderMessages();
-  input.focus();
+  startNewConversation();
 });
 
 clearMemoryButton.addEventListener("click", () => {
   const confirmed = confirm(
-    "Clear AURA's saved conversation from this browser?"
+    "Delete ALL saved conversations from this browser?"
   );
 
   if (!confirmed) return;
 
-  messages.length = 0;
-  localStorage.removeItem(STORAGE_KEY);
+  conversations = [];
+  activeConversationId = null;
 
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(OLD_STORAGE_KEY);
+
+  renderConversationList();
   renderMessages();
   input.focus();
+});
+
+openHistoryButton.addEventListener("click", () => {
+  historyPanel.classList.add("open");
+});
+
+closeHistoryButton.addEventListener("click", () => {
+  historyPanel.classList.remove("open");
 });
 
 input.addEventListener("keydown", (event) => {
@@ -374,4 +593,13 @@ input.addEventListener("keydown", (event) => {
   }
 });
 
+if (conversations.length > 0) {
+  const latest = [...conversations].sort(
+    (a, b) => b.updatedAt - a.updatedAt
+  )[0];
+
+  activeConversationId = latest.id;
+}
+
+renderConversationList();
 renderMessages();
