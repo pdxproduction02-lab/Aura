@@ -114,3 +114,42 @@ button {
 button:hover {
   background: #d0ffdb;
 }
+.header-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.secondary-button {
+  padding: 9px 13px;
+  border: 1px solid #26333b;
+  border-radius: 9px;
+  background: #10171c;
+  color: #b8c5cc;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary-button:hover {
+  background: #182229;
+  color: #ffffff;
+}
+
+.danger-button:hover {
+  border-color: #8d4b4b;
+  color: #ffb0b0;
+}
+
+@media (max-width: 480px) {
+  .header-actions {
+    gap: 8px;
+  }
+
+  .secondary-button {
+    font-size: 11px;
+    padding: 8px 10px;
+  }
+}
