@@ -2,7 +2,46 @@ const chat = document.getElementById("chat");
 const input = document.getElementById("input");
 const welcome = document.getElementById("welcome");
 
-const messages = [];
+const STORAGE_KEY = "aura_conversation";
+let messages = loadMessages();
+
+function loadMessages() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch (error) {
+    console.error("Could not load conversation:", error);
+    return [];
+  }
+}
+
+function saveMessages() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+}
+
+function renderMessages() {
+  chat.innerHTML = "";
+
+  if (messages.length > 0) {
+    welcome.style.display = "none";
+  } else {
+    welcome.style.display = "block";
+  }
+
+  messages.forEach((message) => {
+    const messageElement = document.createElement("div");
+
+    messageElement.className =
+      message.role === "user"
+        ? "message user"
+        : "message ai";
+
+    messageElement.textContent = message.content;
+    chat.appendChild(messageElement);
+  });
+
+  chat.scrollTop = chat.scrollHeight;
+}
 
 async function sendMessage() {
   const text = input.value.trim();
@@ -11,22 +50,17 @@ async function sendMessage() {
 
   welcome.style.display = "none";
 
-  // Save user's message
   messages.push({
     role: "user",
     content: text,
   });
 
-  // Show user's message
-  const userMessage = document.createElement("div");
-  userMessage.className = "message user";
-  userMessage.textContent = text;
-  chat.appendChild(userMessage);
+  saveMessages();
+  renderMessages();
 
   input.value = "";
   input.disabled = true;
 
-  // Show thinking state
   const aiMessage = document.createElement("div");
   aiMessage.className = "message ai";
   aiMessage.textContent = "Thinking...";
@@ -51,18 +85,19 @@ async function sendMessage() {
 
     const reply = data.reply || "I didn't receive a response.";
 
-    // Save AURA's response
     messages.push({
       role: "model",
       content: reply,
     });
 
+    saveMessages();
+
     aiMessage.textContent = reply;
   } catch (error) {
     console.error("AURA error:", error);
 
-    // Remove the failed user message from memory
     messages.pop();
+    saveMessages();
 
     aiMessage.textContent =
       "Sorry, AURA couldn't connect to her AI brain.";
@@ -79,3 +114,5 @@ input.addEventListener("keydown", (event) => {
     sendMessage();
   }
 });
+
+renderMessages();
