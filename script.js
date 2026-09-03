@@ -1,7 +1,8 @@
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
 const welcome = document.getElementById("welcome");
-
+const newChatButton = document.getElementById("newChatButton");
+const clearMemoryButton = document.getElementById("clearMemoryButton");
 const STORAGE_KEY = "aura_conversation";
 let messages = loadMessages();
 
@@ -116,3 +117,30 @@ input.addEventListener("keydown", (event) => {
 });
 
 renderMessages();
+newChatButton.addEventListener("click", () => {
+  if (messages.length === 0) return;
+
+  const confirmed = confirm(
+    "Start a new conversation? Your current conversation will remain saved."
+  );
+
+  if (!confirmed) return;
+
+  messages.length = 0;
+  renderMessages();
+  input.focus();
+});
+
+clearMemoryButton.addEventListener("click", () => {
+  const confirmed = confirm(
+    "Clear AURA's saved conversation from this browser?"
+  );
+
+  if (!confirmed) return;
+
+  messages.length = 0;
+  localStorage.removeItem(STORAGE_KEY);
+
+  renderMessages();
+  input.focus();
+});
