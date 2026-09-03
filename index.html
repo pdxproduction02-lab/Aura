@@ -4,8 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AURA — AI Assistant</title>
+    <link rel="stylesheet" href="style.css" />
   </head>
+
   <body>
-    <div id="root"></div>
+    <div class="app">
+      <header>
+        <div class="logo">AURA</div>
+        <div class="subtitle">ARTIFICIAL INTELLIGENCE</div>
+      </header>
+
+      <main>
+        <div class="welcome" id="welcome">
+          <h1>Hello. I'm AURA.</h1>
+          <p>What are we building today?</p>
+        </div>
+
+        <div class="chat" id="chat"></div>
+
+        <div class="input-area">
+          <input
+            id="input"
+            type="text"
+            placeholder="Ask AURA..."
+            autocomplete="off"
+          />
+          <button onclick="sendMessage()">➤</button>
+        </div>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
   </body>
 </html>
