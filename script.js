@@ -2,12 +2,20 @@ const chat = document.getElementById("chat");
 const input = document.getElementById("input");
 const welcome = document.getElementById("welcome");
 
+const messages = [];
+
 async function sendMessage() {
   const text = input.value.trim();
 
   if (!text) return;
 
   welcome.style.display = "none";
+
+  // Save user's message
+  messages.push({
+    role: "user",
+    content: text,
+  });
 
   // Show user's message
   const userMessage = document.createElement("div");
@@ -16,6 +24,7 @@ async function sendMessage() {
   chat.appendChild(userMessage);
 
   input.value = "";
+  input.disabled = true;
 
   // Show thinking state
   const aiMessage = document.createElement("div");
@@ -30,7 +39,7 @@ async function sendMessage() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message: text,
+        messages: messages,
       }),
     });
 
@@ -40,12 +49,27 @@ async function sendMessage() {
       throw new Error(data.error || "Something went wrong");
     }
 
-    aiMessage.textContent = data.reply || "I didn't receive a response.";
+    const reply = data.reply || "I didn't receive a response.";
+
+    // Save AURA's response
+    messages.push({
+      role: "model",
+      content: reply,
+    });
+
+    aiMessage.textContent = reply;
   } catch (error) {
-    console.error(error);
+    console.error("AURA error:", error);
+
+    // Remove the failed user message from memory
+    messages.pop();
+
     aiMessage.textContent =
       "Sorry, AURA couldn't connect to her AI brain.";
   }
+
+  input.disabled = false;
+  input.focus();
 
   chat.scrollTop = chat.scrollHeight;
 }
