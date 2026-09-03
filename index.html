@@ -19,10 +19,7 @@
         <div class="subtitle">ARTIFICIAL INTELLIGENCE</div>
 
         <div class="header-actions">
-          <button
-            id="newChatButton"
-            class="secondary-button"
-          >
+          <button id="newChatButton" class="secondary-button">
             New Conversation
           </button>
 
@@ -35,25 +32,44 @@
         </div>
       </header>
 
-      <main>
-        <div class="welcome" id="welcome">
-          <h1>Hello. I'm AURA.</h1>
-          <p>What are we building today?</p>
-        </div>
+      <div class="workspace">
+        <aside class="history-panel">
+          <div class="history-heading">
+            <span>CONVERSATIONS</span>
+            <button id="closeHistoryButton" class="mobile-close-button">
+              ×
+            </button>
+          </div>
 
-        <div class="chat" id="chat"></div>
+          <div id="conversationList" class="conversation-list"></div>
+        </aside>
 
-        <div class="input-area">
-          <input
-            id="input"
-            type="text"
-            placeholder="Ask AURA..."
-            autocomplete="off"
-          />
+        <main>
+          <div class="mobile-history-bar">
+            <button id="openHistoryButton" class="history-toggle-button">
+              ☰ History
+            </button>
+          </div>
 
-          <button onclick="sendMessage()">➤</button>
-        </div>
-      </main>
+          <div class="welcome" id="welcome">
+            <h1>Hello. I'm AURA.</h1>
+            <p>What are we building today?</p>
+          </div>
+
+          <div class="chat" id="chat"></div>
+
+          <div class="input-area">
+            <input
+              id="input"
+              type="text"
+              placeholder="Ask AURA..."
+              autocomplete="off"
+            />
+
+            <button onclick="sendMessage()">➤</button>
+          </div>
+        </main>
+      </div>
     </div>
 
     <script src="script.js"></script>
