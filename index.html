@@ -29,6 +29,13 @@
           >
             Clear Memory
           </button>
+
+          <button
+            id="settingsButton"
+            class="secondary-button"
+          >
+            Settings
+          </button>
         </div>
       </header>
 
@@ -36,17 +43,27 @@
         <aside class="history-panel">
           <div class="history-heading">
             <span>CONVERSATIONS</span>
-            <button id="closeHistoryButton" class="mobile-close-button">
+
+            <button
+              id="closeHistoryButton"
+              class="mobile-close-button"
+            >
               ×
             </button>
           </div>
 
-          <div id="conversationList" class="conversation-list"></div>
+          <div
+            id="conversationList"
+            class="conversation-list"
+          ></div>
         </aside>
 
         <main>
           <div class="mobile-history-bar">
-            <button id="openHistoryButton" class="history-toggle-button">
+            <button
+              id="openHistoryButton"
+              class="history-toggle-button"
+            >
               ☰ History
             </button>
           </div>
@@ -69,6 +86,93 @@
             <button onclick="sendMessage()">➤</button>
           </div>
         </main>
+      </div>
+    </div>
+
+    <!-- Settings modal -->
+    <div
+      id="settingsModal"
+      class="settings-overlay"
+      aria-hidden="true"
+    >
+      <div
+        class="settings-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settingsTitle"
+      >
+        <div class="settings-header">
+          <div>
+            <h2 id="settingsTitle">AURA Settings</h2>
+            <p>Manage your local conversation data.</p>
+          </div>
+
+          <button
+            id="closeSettingsButton"
+            class="settings-close-button"
+            aria-label="Close settings"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="settings-section">
+          <h3>Memory</h3>
+
+          <div class="memory-stat">
+            <span>Saved conversations</span>
+            <strong id="conversationCount">0</strong>
+          </div>
+
+          <div class="memory-stat">
+            <span>Storage used</span>
+            <strong id="storageSize">0 KB</strong>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>Conversation data</h3>
+
+          <button
+            id="exportButton"
+            class="settings-action-button"
+          >
+            Export Conversations
+          </button>
+
+          <label
+            for="importInput"
+            class="settings-action-button"
+          >
+            Import Conversations
+          </label>
+
+          <input
+            id="importInput"
+            type="file"
+            accept=".json,application/json"
+            hidden
+          />
+        </div>
+
+        <div class="settings-section">
+          <h3>Privacy</h3>
+
+          <p class="settings-note">
+            Your conversations are stored locally in this browser.
+            They are not automatically uploaded to a personal memory
+            database.
+          </p>
+        </div>
+
+        <div class="settings-footer">
+          <button
+            id="settingsClearButton"
+            class="settings-action-button danger-action"
+          >
+            Delete All Local Memory
+          </button>
+        </div>
       </div>
     </div>
 
