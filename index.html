@@ -1,25 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-  <header>
-  <div class="logo">AURA</div>
-  <div class="subtitle">ARTIFICIAL INTELLIGENCE</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
 
-  <div class="header-actions">
-    <button id="newChatButton" class="secondary-button">
-      New Conversation
-    </button>
+    <title>AURA — AI Assistant</title>
 
-    <button id="clearMemoryButton" class="secondary-button danger-button">
-      Clear Memory
-    </button>
-  </div>
-  </header>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
   <body>
     <div class="app">
       <header>
         <div class="logo">AURA</div>
         <div class="subtitle">ARTIFICIAL INTELLIGENCE</div>
+
+        <div class="header-actions">
+          <button
+            id="newChatButton"
+            class="secondary-button"
+          >
+            New Conversation
+          </button>
+
+          <button
+            id="clearMemoryButton"
+            class="secondary-button danger-button"
+          >
+            Clear Memory
+          </button>
+        </div>
       </header>
 
       <main>
@@ -37,6 +50,7 @@
             placeholder="Ask AURA..."
             autocomplete="off"
           />
+
           <button onclick="sendMessage()">➤</button>
         </div>
       </main>
