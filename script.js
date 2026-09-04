@@ -1,219 +1,131 @@
+"use strict";
+
+/* =========================================================
+   AURA — FRONTEND APPLICATION
+   ========================================================= */
+
+/* -----------------------------
+   DOM
+----------------------------- */
+
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
+const sendButton = document.getElementById("sendButton");
 const welcome = document.getElementById("welcome");
 
-const newChatButton = document.getElementById("newChatButton");
-const clearMemoryButton = document.getElementById("clearMemoryButton");
+const newChatButton =
+  document.getElementById("newChatButton");
 
-const conversationList = document.getElementById("conversationList");
-const historyPanel = document.querySelector(".history-panel");
-const openHistoryButton = document.getElementById("openHistoryButton");
-const closeHistoryButton = document.getElementById("closeHistoryButton");
-const settingsButton = document.getElementById("settingsButton");
-const settingsModal = document.getElementById("settingsModal");
-const closeSettingsButton = document.getElementById("closeSettingsButton");
-const settingsClearButton = document.getElementById("settingsClearButton");
-const exportButton = document.getElementById("exportButton");
-const importInput = document.getElementById("importInput");
+const clearMemoryButton =
+  document.getElementById("clearMemoryButton");
 
-const conversationCount = document.getElementById("conversationCount");
-const storageSize = document.getElementById("storageSize");
-const knowledgeInput = document.getElementById("knowledgeInput");
-const knowledgeList = document.getElementById("knowledgeList");
+const conversationList =
+  document.getElementById("conversationList");
 
-const KNOWLEDGE_STORAGE_KEY = "aura_knowledge_v1";
+const historyPanel =
+  document.querySelector(".history-panel");
 
-let knowledgeFiles = loadKnowledge();
-const imageInput = document.getElementById("imageInput");
-const imagePreview = document.getElementById("imagePreview");
+const openHistoryButton =
+  document.getElementById("openHistoryButton");
 
-let selectedImage = null;
+const closeHistoryButton =
+  document.getElementById("closeHistoryButton");
+
+const settingsButton =
+  document.getElementById("settingsButton");
+
+const settingsModal =
+  document.getElementById("settingsModal");
+
+const closeSettingsButton =
+  document.getElementById("closeSettingsButton");
+
+const settingsClearButton =
+  document.getElementById("settingsClearButton");
+
+const exportButton =
+  document.getElementById("exportButton");
+
+const importInput =
+  document.getElementById("importInput");
+
+const conversationCount =
+  document.getElementById("conversationCount");
+
+const storageSize =
+  document.getElementById("storageSize");
+
+const knowledgeInput =
+  document.getElementById("knowledgeInput");
+
+const knowledgeList =
+  document.getElementById("knowledgeList");
+
+const imageInput =
+  document.getElementById("imageInput");
+
+const imagePreview =
+  document.getElementById("imagePreview");
+
+
+/* -----------------------------
+   STORAGE
+----------------------------- */
+
 const STORAGE_KEY = "aura_conversations";
 const OLD_STORAGE_KEY = "aura_conversation";
+const KNOWLEDGE_STORAGE_KEY = "aura_knowledge_v1";
+
+const APP_VERSION = "0.5.0";
+
+
+/* -----------------------------
+   STATE
+----------------------------- */
 
 let conversations = loadConversations();
+let knowledgeFiles = loadKnowledge();
+
 let activeConversationId = null;
+
+let selectedImage = null;
+
 let isGenerating = false;
 
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+
 function createId() {
-  return crypto.randomUUID
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random()}`;
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
 }
 
-function createConversation() {
-  return {
-    id: createId(),
-    title: "New Conversation",
-    messages: [],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  };
+
+function delay(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
 }
 
-function loadConversations() {
+
+function safeParse(value, fallback) {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (saved) {
-      const parsed = JSON.parse(saved);
-
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-
-    // Migrate the previous single-chat memory
-    const oldMessages = localStorage.getItem(OLD_STORAGE_KEY);
-
-    if (oldMessages) {
-      const messages = JSON.parse(oldMessages);
-
-      if (Array.isArray(messages) && messages.length > 0) {
-        const migrated = createConversation();
-        migrated.messages = messages;
-        migrated.title = getConversationTitle(messages);
-
-        return [migrated];
-      }
-    }
-
-    return [];
-  } catch (error) {
-    console.error("Could not load conversations:", error);
-    return [];
+    return JSON.parse(value);
+  } catch {
+    return fallback;
   }
 }
 
-function saveConversations() {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(conversations)
-  );
-
-  updateMemoryStats();
-}
-function updateMemoryStats() {
-  conversationCount.textContent = conversations.length;
-
-  const savedData = localStorage.getItem(STORAGE_KEY) || "";
-  const sizeInKB = new Blob([savedData]).size / 1024;
-
-  storageSize.textContent =
-    sizeInKB < 1
-      ? `${Math.round(sizeInKB * 1024)} bytes`
-      : `${sizeInKB.toFixed(1)} KB`;
-}
-
-function openSettings() {
-  updateMemoryStats();
-
-  settingsModal.classList.add("open");
-  settingsModal.setAttribute("aria-hidden", "false");
-}
-
-function closeSettings() {
-  settingsModal.classList.remove("open");
-  settingsModal.setAttribute("aria-hidden", "true");
-}
-
-function exportConversations() {
-  const backup = {
-    app: "AURA",
-    version: "0.4.4",
-    exportedAt: new Date().toISOString(),
-    conversations: conversations,
-  };
-
-  const blob = new Blob(
-    [JSON.stringify(backup, null, 2)],
-    { type: "application/json" }
-  );
-
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = `aura-conversations-${Date.now()}.json`;
-  link.click();
-
-  URL.revokeObjectURL(url);
-}
-
-function importConversations(file) {
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    try {
-      const backup = JSON.parse(reader.result);
-
-      if (
-        !backup ||
-        !Array.isArray(backup.conversations)
-      ) {
-        throw new Error("Invalid backup format");
-      }
-
-      const validConversations = backup.conversations.filter(
-        (conversation) =>
-          conversation &&
-          typeof conversation.id === "string" &&
-          Array.isArray(conversation.messages)
-      );
-
-      if (validConversations.length === 0) {
-        throw new Error("No valid conversations found");
-      }
-
-      const confirmed = confirm(
-        "Importing will replace your current local conversations. Continue?"
-      );
-
-      if (!confirmed) return;
-
-      conversations = validConversations;
-      saveConversations();
-
-      activeConversationId = conversations[0]?.id || null;
-
-      renderConversationList();
-      renderMessages();
-      updateMemoryStats();
-
-      alert("Conversations imported successfully.");
-    } catch (error) {
-      console.error("Import failed:", error);
-      alert("This file is not a valid AURA backup.");
-    }
-  };
-
-  reader.readAsText(file);
-}
-
-function getActiveConversation() {
-  return conversations.find(
-    (conversation) =>
-      conversation.id === activeConversationId
-  );
-}
-
-function getConversationTitle(messages) {
-  const firstUserMessage = messages.find(
-    (message) => message.role === "user"
-  );
-
-  if (!firstUserMessage) {
-    return "New Conversation";
-  }
-
-  const title = firstUserMessage.content
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return title.length > 32
-    ? `${title.slice(0, 32)}…`
-    : title;
-}
 
 function escapeHTML(text) {
   return String(text)
@@ -224,243 +136,1031 @@ function escapeHTML(text) {
     .replace(/'/g, "&#039;");
 }
 
+
+/* =========================================================
+   CONVERSATIONS
+   ========================================================= */
+
+function createConversation() {
+  const now = Date.now();
+
+  return {
+    id: createId(),
+    title: "New Conversation",
+    messages: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+
+function normalizeMessage(message) {
+  if (!message || typeof message !== "object") {
+    return null;
+  }
+
+  const role =
+    message.role === "user"
+      ? "user"
+      : message.role === "model"
+        ? "model"
+        : null;
+
+  if (!role) {
+    return null;
+  }
+
+  return {
+    role,
+    content: String(message.content || ""),
+  };
+}
+
+
+function normalizeConversation(conversation) {
+  if (!conversation || typeof conversation !== "object") {
+    return null;
+  }
+
+  if (typeof conversation.id !== "string") {
+    return null;
+  }
+
+  if (!Array.isArray(conversation.messages)) {
+    return null;
+  }
+
+  const messages = conversation.messages
+    .map(normalizeMessage)
+    .filter(Boolean);
+
+  const createdAt =
+    Number(conversation.createdAt) || Date.now();
+
+  const updatedAt =
+    Number(conversation.updatedAt) || createdAt;
+
+  return {
+    id: conversation.id,
+    title:
+      typeof conversation.title === "string"
+        ? conversation.title
+        : getConversationTitle(messages),
+
+    messages,
+
+    createdAt,
+    updatedAt,
+  };
+}
+
+
+function loadConversations() {
+  try {
+    const saved =
+      localStorage.getItem(STORAGE_KEY);
+
+    if (saved) {
+      const parsed = safeParse(saved, []);
+
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map(normalizeConversation)
+          .filter(Boolean);
+      }
+    }
+
+
+    /* Legacy migration */
+
+    const oldMessages =
+      localStorage.getItem(OLD_STORAGE_KEY);
+
+    if (oldMessages) {
+      const parsed =
+        safeParse(oldMessages, []);
+
+      if (
+        Array.isArray(parsed) &&
+        parsed.length > 0
+      ) {
+        const conversation =
+          createConversation();
+
+        conversation.messages = parsed
+          .map(normalizeMessage)
+          .filter(Boolean);
+
+        conversation.title =
+          getConversationTitle(
+            conversation.messages
+          );
+
+        return [conversation];
+      }
+    }
+
+    return [];
+  } catch (error) {
+    console.error(
+      "AURA: Could not load conversations.",
+      error
+    );
+
+    return [];
+  }
+}
+
+
+function saveConversations() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(conversations)
+    );
+
+    updateMemoryStats();
+  } catch (error) {
+    console.error(
+      "AURA: Could not save conversations.",
+      error
+    );
+
+    alert(
+      "AURA couldn't save your conversation. Your browser storage may be full."
+    );
+  }
+}
+
+
+function getActiveConversation() {
+  return conversations.find(
+    (conversation) =>
+      conversation.id === activeConversationId
+  );
+}
+
+
+function getConversationTitle(messages) {
+  const firstUserMessage =
+    messages.find(
+      (message) => message.role === "user"
+    );
+
+  if (!firstUserMessage) {
+    return "New Conversation";
+  }
+
+  const title =
+    String(firstUserMessage.content || "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  if (!title) {
+    return "New Conversation";
+  }
+
+  return title.length > 40
+    ? `${title.slice(0, 40)}…`
+    : title;
+}
+
+
+/* =========================================================
+   MEMORY STATS
+   ========================================================= */
+
+function updateMemoryStats() {
+  if (conversationCount) {
+    conversationCount.textContent =
+      conversations.length;
+  }
+
+  const conversationData =
+    localStorage.getItem(STORAGE_KEY) || "";
+
+  const knowledgeData =
+    localStorage.getItem(
+      KNOWLEDGE_STORAGE_KEY
+    ) || "";
+
+  const totalBytes =
+    new Blob([
+      conversationData,
+      knowledgeData,
+    ]).size;
+
+  if (!storageSize) {
+    return;
+  }
+
+  if (totalBytes < 1024) {
+    storageSize.textContent =
+      `${totalBytes} bytes`;
+    return;
+  }
+
+  storageSize.textContent =
+    `${(totalBytes / 1024).toFixed(1)} KB`;
+}
+
+
+/* =========================================================
+   KNOWLEDGE SYSTEM
+   ========================================================= */
+
+function loadKnowledge() {
+  try {
+    const saved =
+      localStorage.getItem(
+        KNOWLEDGE_STORAGE_KEY
+      );
+
+    if (!saved) {
+      return [];
+    }
+
+    const parsed = safeParse(saved, []);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(
+      (file) =>
+        file &&
+        typeof file.id === "string" &&
+        typeof file.name === "string" &&
+        typeof file.content === "string"
+    );
+  } catch (error) {
+    console.error(
+      "AURA: Could not load knowledge.",
+      error
+    );
+
+    return [];
+  }
+}
+
+
+function saveKnowledge() {
+  try {
+    localStorage.setItem(
+      KNOWLEDGE_STORAGE_KEY,
+      JSON.stringify(knowledgeFiles)
+    );
+
+    updateMemoryStats();
+  } catch (error) {
+    console.error(
+      "AURA: Could not save knowledge.",
+      error
+    );
+
+    alert(
+      "AURA couldn't save this knowledge file. It may be too large."
+    );
+  }
+}
+
+
+function getKnowledgeContext() {
+  if (
+    !Array.isArray(knowledgeFiles) ||
+    knowledgeFiles.length === 0
+  ) {
+    return "";
+  }
+
+  return knowledgeFiles
+    .map(
+      (file) =>
+        `FILE: ${file.name}\n${file.content}`
+    )
+    .join("\n\n--------------------\n\n");
+}
+
+
+function renderKnowledgeList() {
+  knowledgeList.innerHTML = "";
+
+  if (knowledgeFiles.length === 0) {
+    const empty =
+      document.createElement("div");
+
+    empty.className = "knowledge-empty";
+
+    empty.textContent =
+      "No knowledge files added yet.";
+
+    knowledgeList.appendChild(empty);
+
+    return;
+  }
+
+
+  knowledgeFiles.forEach((file) => {
+    const item =
+      document.createElement("div");
+
+    item.className = "knowledge-item";
+
+
+    const name =
+      document.createElement("span");
+
+    name.className = "knowledge-name";
+
+    name.textContent = file.name;
+
+
+    const removeButton =
+      document.createElement("button");
+
+    removeButton.type = "button";
+    removeButton.className =
+      "knowledge-remove";
+
+    removeButton.textContent = "×";
+    removeButton.title =
+      `Remove ${file.name}`;
+
+    removeButton.addEventListener(
+      "click",
+      () => {
+        removeKnowledge(file.id);
+      }
+    );
+
+
+    item.appendChild(name);
+    item.appendChild(removeButton);
+
+    knowledgeList.appendChild(item);
+  });
+}
+
+
+function addKnowledgeFile(file) {
+  if (!file) {
+    return;
+  }
+
+  if (
+    file.type &&
+    file.type !== "text/plain" &&
+    !file.name.toLowerCase().endsWith(".txt")
+  ) {
+    alert(
+      "AURA currently supports .txt knowledge files."
+    );
+
+    return;
+  }
+
+  if (file.size > 500 * 1024) {
+    alert(
+      "Please keep knowledge files below 500 KB."
+    );
+
+    return;
+  }
+
+
+  const reader =
+    new FileReader();
+
+  reader.onload = () => {
+    const content =
+      String(reader.result || "").trim();
+
+    if (!content) {
+      alert(
+        "This knowledge file is empty."
+      );
+
+      return;
+    }
+
+
+    const existing =
+      knowledgeFiles.find(
+        (item) => item.name === file.name
+      );
+
+    const knowledgeObject = {
+      id:
+        existing?.id || createId(),
+
+      name: file.name,
+
+      content,
+
+      updatedAt: Date.now(),
+    };
+
+
+    if (existing) {
+      knowledgeFiles =
+        knowledgeFiles.map(
+          (item) =>
+            item.id === existing.id
+              ? knowledgeObject
+              : item
+        );
+    } else {
+      knowledgeFiles.push(
+        knowledgeObject
+      );
+    }
+
+
+    saveKnowledge();
+    renderKnowledgeList();
+  };
+
+
+  reader.onerror = () => {
+    alert(
+      "AURA couldn't read that file."
+    );
+  };
+
+
+  reader.readAsText(file);
+}
+
+
+function removeKnowledge(id) {
+  const file =
+    knowledgeFiles.find(
+      (item) => item.id === id
+    );
+
+  if (!file) {
+    return;
+  }
+
+  const confirmed =
+    confirm(
+      `Remove "${file.name}" from AURA's knowledge?`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  knowledgeFiles =
+    knowledgeFiles.filter(
+      (item) => item.id !== id
+    );
+
+  saveKnowledge();
+  renderKnowledgeList();
+}
+
+
+/* =========================================================
+   MARKDOWN
+   ========================================================= */
+
 function formatMarkdown(text) {
-  let html = escapeHTML(text);
+  let html =
+    escapeHTML(text);
+
+
+  /* Code blocks */
 
   html = html.replace(
-    /```([\s\S]*?)```/g,
-    '<pre class="code-block"><code>$1</code></pre>'
+    /```(?:([a-zA-Z0-9_-]+)\n)?([\s\S]*?)```/g,
+    (_, language, code) => {
+      const languageLabel =
+        language
+          ? `<span class="code-language">${escapeHTML(language)}</span>`
+          : "";
+
+      return `
+        <pre class="code-block">
+          ${languageLabel}
+          <code>${code.trim()}</code>
+        </pre>
+      `;
+    }
   );
+
+
+  /* Inline code */
 
   html = html.replace(
     /`([^`\n]+)`/g,
     '<code class="inline-code">$1</code>'
   );
 
-  html = html.replace(/^### (.*)$/gm, "<h4>$1</h4>");
-  html = html.replace(/^## (.*)$/gm, "<h3>$1</h3>");
-  html = html.replace(/^# (.*)$/gm, "<h2>$1</h2>");
+
+  /* Headings */
+
+  html = html.replace(
+    /^### (.*)$/gm,
+    "<h4>$1</h4>"
+  );
+
+  html = html.replace(
+    /^## (.*)$/gm,
+    "<h3>$1</h3>"
+  );
+
+  html = html.replace(
+    /^# (.*)$/gm,
+    "<h2>$1</h2>"
+  );
+
+
+  /* Bold */
 
   html = html.replace(
     /\*\*(.*?)\*\*/g,
     "<strong>$1</strong>"
   );
 
+
+  /* Italic */
+
   html = html.replace(
     /(?<!\*)\*([^*\n]+)\*(?!\*)/g,
     "<em>$1</em>"
   );
 
+
+  /* Unordered lists */
+
   html = html.replace(
     /^(?:[-*] .*(?:\n|$))+/gm,
     (block) => {
-      const items = block
-        .trim()
-        .split("\n")
-        .map((line) => line.replace(/^[-*] /, "").trim())
-        .map((item) => `<li>${item}</li>`)
-        .join("");
+      const items =
+        block
+          .trim()
+          .split("\n")
+          .map(
+            (line) =>
+              line
+                .replace(/^[-*]\s+/, "")
+                .trim()
+          )
+          .filter(Boolean)
+          .map(
+            (item) =>
+              `<li>${item}</li>`
+          )
+          .join("");
 
       return `<ul>${items}</ul>`;
     }
   );
 
+
+  /* Ordered lists */
+
   html = html.replace(
-    /^(?:\d+\. .*(?:\n|$))+/gm,
+    /^(?:\d+\.\s+.*(?:\n|$))+/gm,
     (block) => {
-      const items = block
-        .trim()
-        .split("\n")
-        .map((line) => line.replace(/^\d+\. /, "").trim())
-        .map((item) => `<li>${item}</li>`)
-        .join("");
+      const items =
+        block
+          .trim()
+          .split("\n")
+          .map(
+            (line) =>
+              line
+                .replace(/^\d+\.\s+/, "")
+                .trim()
+          )
+          .filter(Boolean)
+          .map(
+            (item) =>
+              `<li>${item}</li>`
+          )
+          .join("");
 
       return `<ol>${items}</ol>`;
     }
   );
 
-  html = html.replace(/\n/g, "<br>");
-  html = html.replace(/(<\/(?:h2|h3|h4|ul|ol|pre)>)<br>/g, "$1");
-  html = html.replace(/<br>(<(?:h2|h3|h4|ul|ol|pre)>)/g, "$1");
+
+  /* Links */
+
+  html = html.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+  );
+
+
+  /* New lines */
+
+  html =
+    html.replace(/\n/g, "<br>");
+
+
+  html =
+    html.replace(
+      /(<\/(?:h2|h3|h4|ul|ol|pre)>)<br>/g,
+      "$1"
+    );
+
+  html =
+    html.replace(
+      /<br>(<(?:h2|h3|h4|ul|ol|pre)>)/g,
+      "$1"
+    );
+
 
   return html;
 }
 
+
+/* =========================================================
+   MESSAGE UI
+   ========================================================= */
+
+function createCopyButton(content) {
+  const button =
+    document.createElement("button");
+
+  button.type = "button";
+  button.className =
+    "copy-button";
+
+  button.textContent =
+    "Copy";
+
+
+  button.addEventListener(
+    "click",
+    async () => {
+      try {
+        await navigator.clipboard.writeText(
+          content
+        );
+
+        button.textContent =
+          "Copied ✓";
+
+        setTimeout(() => {
+          button.textContent =
+            "Copy";
+        }, 1500);
+      } catch {
+        button.textContent =
+          "Copy failed";
+
+        setTimeout(() => {
+          button.textContent =
+            "Copy";
+        }, 1500);
+      }
+    }
+  );
+
+
+  return button;
+}
+
+
 function createMessageElement(message) {
-  const messageElement = document.createElement("div");
+  const messageElement =
+    document.createElement("div");
 
   messageElement.className =
     message.role === "user"
       ? "message user"
       : "message ai";
 
+
   if (message.role === "model") {
-    const responseContent = document.createElement("div");
-    responseContent.className = "response-content";
-    responseContent.innerHTML = formatMarkdown(message.content);
+    const responseContent =
+      document.createElement("div");
 
-    const actions = document.createElement("div");
-    actions.className = "message-actions";
+    responseContent.className =
+      "response-content";
 
-    const copyButton = document.createElement("button");
-    copyButton.className = "copy-button";
-    copyButton.textContent = "Copy";
+    responseContent.innerHTML =
+      formatMarkdown(
+        message.content
+      );
 
-    copyButton.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(message.content);
-        copyButton.textContent = "Copied ✓";
 
-        setTimeout(() => {
-          copyButton.textContent = "Copy";
-        }, 1500);
-      } catch (error) {
-        copyButton.textContent = "Copy failed";
-      }
-    });
+    const actions =
+      document.createElement("div");
 
-    actions.appendChild(copyButton);
+    actions.className =
+      "message-actions";
 
-    messageElement.appendChild(responseContent);
-    messageElement.appendChild(actions);
+
+    actions.appendChild(
+      createCopyButton(
+        message.content
+      )
+    );
+
+
+    messageElement.appendChild(
+      responseContent
+    );
+
+    messageElement.appendChild(
+      actions
+    );
+
   } else {
-    messageElement.textContent = message.content;
+    messageElement.textContent =
+      message.content;
   }
+
 
   return messageElement;
 }
 
+
 function renderMessages() {
   chat.innerHTML = "";
 
-  const conversation = getActiveConversation();
-  const messages = conversation ? conversation.messages : [];
+  const conversation =
+    getActiveConversation();
+
+  const messages =
+    conversation?.messages || [];
+
 
   welcome.style.display =
-    messages.length > 0 ? "none" : "block";
+    messages.length > 0
+      ? "none"
+      : "";
 
-  messages.forEach((message) => {
-    chat.appendChild(createMessageElement(message));
-  });
 
-  chat.scrollTop = chat.scrollHeight;
+  messages.forEach(
+    (message) => {
+      chat.appendChild(
+        createMessageElement(
+          message
+        )
+      );
+    }
+  );
+
+
+  scrollChatToBottom();
 }
+
+
+function scrollChatToBottom() {
+  requestAnimationFrame(() => {
+    chat.scrollTop =
+      chat.scrollHeight;
+  });
+}
+
+
+/* =========================================================
+   CONVERSATION LIST
+   ========================================================= */
 
 function renderConversationList() {
   conversationList.innerHTML = "";
 
+
   if (conversations.length === 0) {
-    conversationList.innerHTML = `
-      <div class="history-empty">
-        Your conversations will appear here.
-      </div>
-    `;
+    const empty =
+      document.createElement("div");
+
+    empty.className =
+      "history-empty";
+
+    empty.textContent =
+      "Your conversations will appear here.";
+
+    conversationList.appendChild(
+      empty
+    );
+
     return;
   }
 
-  const sortedConversations = [...conversations].sort(
-    (a, b) => b.updatedAt - a.updatedAt
-  );
 
-  sortedConversations.forEach((conversation) => {
-    const item = document.createElement("div");
-    item.className = "conversation-item";
+  const sorted =
+    [...conversations].sort(
+      (a, b) =>
+        b.updatedAt -
+        a.updatedAt
+    );
 
-    if (conversation.id === activeConversationId) {
-      item.classList.add("active");
+
+  sorted.forEach(
+    (conversation) => {
+      const item =
+        document.createElement("div");
+
+      item.className =
+        "conversation-item";
+
+
+      if (
+        conversation.id ===
+        activeConversationId
+      ) {
+        item.classList.add(
+          "active"
+        );
+      }
+
+
+      const title =
+        document.createElement("span");
+
+      title.className =
+        "conversation-title";
+
+      title.textContent =
+        conversation.title;
+
+
+      const deleteButton =
+        document.createElement("button");
+
+      deleteButton.type = "button";
+
+      deleteButton.className =
+        "delete-conversation";
+
+      deleteButton.textContent =
+        "×";
+
+      deleteButton.title =
+        "Delete conversation";
+
+
+      deleteButton.addEventListener(
+        "click",
+        (event) => {
+          event.stopPropagation();
+
+          deleteConversation(
+            conversation.id
+          );
+        }
+      );
+
+
+      item.appendChild(title);
+      item.appendChild(
+        deleteButton
+      );
+
+
+      item.addEventListener(
+        "click",
+        () => {
+          switchConversation(
+            conversation.id
+          );
+        }
+      );
+
+
+      conversationList.appendChild(
+        item
+      );
     }
-
-    const title = document.createElement("span");
-    title.className = "conversation-title";
-    title.textContent = conversation.title;
-
-    const deleteButton = document.createElement("button");
-    deleteButton.className = "delete-conversation";
-    deleteButton.textContent = "×";
-    deleteButton.title = "Delete conversation";
-
-    deleteButton.addEventListener("click", (event) => {
-      event.stopPropagation();
-      deleteConversation(conversation.id);
-    });
-
-    item.appendChild(title);
-    item.appendChild(deleteButton);
-
-    item.addEventListener("click", () => {
-      switchConversation(conversation.id);
-    });
-
-    conversationList.appendChild(item);
-  });
+  );
 }
+
+
+/* =========================================================
+   CONVERSATION ACTIONS
+   ========================================================= */
 
 function startNewConversation() {
-  const conversation = createConversation();
-
-  conversations.push(conversation);
-  activeConversationId = conversation.id;
-
-  saveConversations();
-  renderConversationList();
-  renderMessages();
-
-  input.focus();
-}
-
-function switchConversation(id) {
-  if (isGenerating) return;
-
-  activeConversationId = id;
-
-  renderConversationList();
-  renderMessages();
-
-  historyPanel.classList.remove("open");
-  input.focus();
-}
-
-function deleteConversation(id) {
-  const conversation = conversations.find(
-    (item) => item.id === id
-  );
-
-  if (!conversation) return;
-
-  const confirmed = confirm(
-    `Delete "${conversation.title}"?`
-  );
-
-  if (!confirmed) return;
-
-  conversations = conversations.filter(
-    (item) => item.id !== id
-  );
-
-  if (activeConversationId === id) {
-    activeConversationId = null;
-
-    if (conversations.length > 0) {
-      const latest = [...conversations].sort(
-        (a, b) => b.updatedAt - a.updatedAt
-      )[0];
-
-      activeConversationId = latest.id;
-    }
+  if (isGenerating) {
+    return;
   }
 
+
+  const conversation =
+    createConversation();
+
+
+  conversations.push(
+    conversation
+  );
+
+  activeConversationId =
+    conversation.id;
+
+
   saveConversations();
+
+  renderConversationList();
+  renderMessages();
+
+  closeHistory();
+
+  input.focus();
+}
+
+
+function switchConversation(id) {
+  if (isGenerating) {
+    return;
+  }
+
+
+  const exists =
+    conversations.some(
+      (conversation) =>
+        conversation.id === id
+    );
+
+  if (!exists) {
+    return;
+  }
+
+
+  activeConversationId =
+    id;
+
+
+  renderConversationList();
+  renderMessages();
+
+  closeHistory();
+
+  input.focus();
+}
+
+
+function deleteConversation(id) {
+  const conversation =
+    conversations.find(
+      (item) =>
+        item.id === id
+    );
+
+  if (!conversation) {
+    return;
+  }
+
+
+  const confirmed =
+    confirm(
+      `Delete "${conversation.title}"?`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+
+  conversations =
+    conversations.filter(
+      (item) =>
+        item.id !== id
+    );
+
+
+  if (
+    activeConversationId === id
+  ) {
+    const latest =
+      [...conversations].sort(
+        (a, b) =>
+          b.updatedAt -
+          a.updatedAt
+      )[0];
+
+    activeConversationId =
+      latest?.id || null;
+  }
+
+
+  saveConversations();
+
   renderConversationList();
   renderMessages();
 }
 
-function createThinkingElement() {
-  const thinking = document.createElement("div");
 
-  thinking.className = "message ai thinking-message";
+/* =========================================================
+   THINKING / TYPING
+   ========================================================= */
+
+function createThinkingElement() {
+  const thinking =
+    document.createElement("div");
+
+  thinking.className =
+    "message ai thinking-message";
 
   thinking.innerHTML = `
     <span>AURA is thinking</span>
+
     <span class="thinking-dots">
       <span></span>
       <span></span>
@@ -468,307 +1168,14 @@ function createThinkingElement() {
     </span>
   `;
 
+
   return thinking;
 }
 
+
 function createTypingElement() {
-  const messageElement = document.createElement("div");
-  messageElement.className = "message ai";
-
-  const responseContent = document.createElement("div");
-  responseContent.className = "response-content";
-
-  messageElement.appendChild(responseContent);
-
-  return {
-    messageElement,
-    responseContent,
-  };
-}
-
-function delay(milliseconds) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
-}
-
-async function typeResponse(element, text) {
-  let currentText = "";
-
-  for (let index = 0; index < text.length; index++) {
-    currentText += text[index];
-
-    element.innerHTML = formatMarkdown(currentText);
-
-    chat.scrollTop = chat.scrollHeight;
-
-    const typingDelay = text.length > 500 ? 4 : 12;
-
-    await delay(typingDelay);
-  }
-}
-
-async function requestAURA() {
-  const conversation = getActiveConversation();
-
-  const response = await fetch("/api/chat", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      messages: conversation.messages,
-      knowledge: getKnowledgeContext(),
-      image: selectedImage,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("AURA API request failed");
-  }
-
-  const data = await response.json();
-
-  if (!data.reply) {
-    throw new Error("AURA returned an empty response");
-  }
-
-  return data.reply;
-}
-
-async function generateResponse() {
-  if (isGenerating) return;
-
-  const conversation = getActiveConversation();
-
-  if (!conversation) return;
-
-  isGenerating = true;
-  input.disabled = true;
-
-  const thinkingElement = createThinkingElement();
-  chat.appendChild(thinkingElement);
-  chat.scrollTop = chat.scrollHeight;
-
-  try {
-    const reply = await requestAURA();
-
-    thinkingElement.remove();
-
-    const typing = createTypingElement();
-    chat.appendChild(typing.messageElement);
-
-    await typeResponse(typing.responseContent, reply);
-
-    conversation.messages.push({
-      role: "model",
-      content: reply,
-    });
-
-    conversation.updatedAt = Date.now();
-
-    saveConversations();
-    renderConversationList();
-
-    const actions = document.createElement("div");
-    actions.className = "message-actions";
-
-    const copyButton = document.createElement("button");
-    copyButton.className = "copy-button";
-    copyButton.textContent = "Copy";
-
-    copyButton.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(reply);
-        copyButton.textContent = "Copied ✓";
-
-        setTimeout(() => {
-          copyButton.textContent = "Copy";
-        }, 1500);
-      } catch (error) {
-        copyButton.textContent = "Copy failed";
-      }
-    });
-
-    const regenerateButton = document.createElement("button");
-    regenerateButton.className = "copy-button";
-    regenerateButton.textContent = "Regenerate";
-
-    regenerateButton.addEventListener(
-      "click",
-      regenerateLastResponse
-    );
-
-    actions.appendChild(copyButton);
-    actions.appendChild(regenerateButton);
-
-    typing.messageElement.appendChild(actions);
-
-  } catch (error) {
-    console.error("AURA error:", error);
-
-    thinkingElement.remove();
-
-    const errorElement = document.createElement("div");
-    errorElement.className = "message ai";
-    errorElement.textContent =
-      "Sorry, AURA couldn't connect to her AI brain.";
-
-    chat.appendChild(errorElement);
-  }
-
-  isGenerating = false;
-  input.disabled = false;
-  input.focus();
-  chat.scrollTop = chat.scrollHeight;
-}
-
-async function sendMessage() {
-  const text = input.value.trim();
-
-  if (!text || isGenerating) return;
-
-  let conversation = getActiveConversation();
-
-  if (!conversation) {
-    startNewConversation();
-    conversation = getActiveConversation();
-  }
-
-  conversation.messages.push({
-    role: "user",
-    content: text,
-  });
-
-  conversation.title = getConversationTitle(
-    conversation.messages
-  );
-
-  conversation.updatedAt = Date.now();
-
-  saveConversations();
-  renderConversationList();
-  renderMessages();
-
-  input.value = "";
-
-  await generateResponse();
-}
-
-async function regenerateLastResponse() {
-  if (isGenerating) return;
-
-  const conversation = getActiveConversation();
-
-  if (!conversation) return;
-
-  const lastMessage =
-    conversation.messages[conversation.messages.length - 1];
-
-  if (!lastMessage || lastMessage.role !== "model") {
-    return;
-  }
-
-  conversation.messages.pop();
-
-  saveConversations();
-  renderMessages();
-
-  await generateResponse();
-}
-
-newChatButton.addEventListener("click", () => {
-  if (isGenerating) return;
-
-  startNewConversation();
-});
-
-clearMemoryButton.addEventListener("click", () => {
-  const confirmed = confirm(
-    "Delete ALL saved conversations from this browser?"
-  );
-
-  if (!confirmed) return;
-
-  conversations = [];
-  activeConversationId = null;
-
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(OLD_STORAGE_KEY);
-
-  renderConversationList();
-  renderMessages();
-  input.focus();
-});
-
-openHistoryButton.addEventListener("click", () => {
-  historyPanel.classList.add("open");
-});
-
-closeHistoryButton.addEventListener("click", () => {
-  historyPanel.classList.remove("open");
-});
-
-input.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    sendMessage();
-  }
-});
-
-if (conversations.length > 0) {
-  const latest = [...conversations].sort(
-    (a, b) => b.updatedAt - a.updatedAt
-  )[0];
-
-  activeConversationId = latest.id;
-}
-
-renderConversationList();
-renderMessages();
-settingsButton.addEventListener("click", openSettings);
-
-closeSettingsButton.addEventListener("click", closeSettings);
-
-settingsModal.addEventListener("click", (event) => {
-  if (event.target === settingsModal) {
-    closeSettings();
-  }
-});
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    closeSettings();
-  }
-});
-
-exportButton.addEventListener("click", exportConversations);
-
-importInput.addEventListener("change", (event) => {
-  const file = event.target.files[0];
-
-  if (file) {
-    importConversations(file);
-  }
-
-  importInput.value = "";
-});
-
-settingsClearButton.addEventListener("click", () => {
-  const confirmed = confirm(
-    "Delete ALL conversations permanently from this browser?"
-  );
-
-  if (!confirmed) return;
-
-  conversations = [];
-  activeConversationId = null;
-
-  localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem(OLD_STORAGE_KEY);
-
-  renderConversationList();
-  renderMessages();
-  updateMemoryStats();
-  closeSettings();
-  input.focus();
-});
+  const messageElement =
+    document.createElement("div");
+
+  messageElement.className =
+    "message ai";
