@@ -103,15 +103,36 @@
           <div class="chat" id="chat"></div>
 
           <div class="input-area">
-            <input
-              id="input"
-              type="text"
-              placeholder="Ask AURA..."
-              autocomplete="off"
-            />
+  <label
+    for="imageInput"
+    class="image-upload-button"
+    title="Upload image"
+  >
+    +
+  </label>
 
-            <button onclick="sendMessage()">➤</button>
-          </div>
+  <input
+    id="imageInput"
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    hidden
+  />
+
+  <input
+    id="input"
+    type="text"
+    placeholder="Ask AURA..."
+    autocomplete="off"
+  />
+
+  <button onclick="sendMessage()">➤</button>
+</div>
+
+<div
+  id="imagePreview"
+  class="image-preview"
+  hidden
+></div>
         </main>
       </div>
     </div>
