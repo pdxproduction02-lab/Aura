@@ -41,7 +41,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { messages } = req.body;
+    const { messages, knowledge = "" } = req.body;
+    const knowledgeInstruction = `
+LOCAL KNOWLEDGE:
+The user may provide knowledge files below.
+
+Use this information when it is relevant to the user's question.
+Do not invent facts or claim that information is present if it is not.
+If the answer is not available in the knowledge, answer normally and
+make it clear when you are relying on general knowledge.
+
+${knowledge}
+`;
+    
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({
@@ -62,7 +74,9 @@ export default async function handler(req, res) {
       model: "gemini-3.5-flash",
       contents,
       config: {
-        systemInstruction: AURA_SYSTEM_PROMPT,
+        systemInstruction: `${AURA_SYSTEM_PROMPT}
+
+${knowledgeInstruction}`,
       },
     });
 
