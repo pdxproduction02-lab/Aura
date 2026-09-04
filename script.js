@@ -508,6 +508,7 @@ async function requestAURA() {
     },
     body: JSON.stringify({
       messages: conversation.messages,
+      knowledge: getKnowledgeContext(),
     }),
   });
 
