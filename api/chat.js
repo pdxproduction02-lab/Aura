@@ -62,13 +62,30 @@ ${knowledge}
     }
 
     const contents = messages.map((message) => ({
-      role: message.role === "user" ? "user" : "model",
-      parts: [
-        {
-          text: String(message.content || ""),
-        },
-      ],
-    }));
+  role: message.role === "user" ? "user" : "model",
+  parts: [
+    {
+      text: String(message.content || ""),
+    },
+  ],
+}));
+
+if (
+  image &&
+  typeof image.data === "string" &&
+  typeof image.type === "string"
+) {
+  const lastMessage = contents[contents.length - 1];
+
+  if (lastMessage?.role === "user") {
+    lastMessage.parts.push({
+      inlineData: {
+        mimeType: image.type,
+        data: image.data.split(",")[1],
+      },
+    });
+  }
+}
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
