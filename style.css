@@ -585,3 +585,127 @@ button:hover {
     font-size: 20px;
   }
 }
+.knowledge-panel {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto 24px;
+  padding: 18px;
+  border: 1px solid #1d2a31;
+  border-radius: 16px;
+  background: #0d151a;
+}
+
+.knowledge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.knowledge-header h2 {
+  margin: 0;
+  color: #d8ffe1;
+  font-size: 16px;
+}
+
+.knowledge-header p {
+  margin: 6px 0 0;
+  color: #788892;
+  font-size: 12px;
+}
+
+.knowledge-upload-button {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border: 1px solid #315a43;
+  border-radius: 9px;
+  background: #12251b;
+  color: #bfffd0;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.knowledge-upload-button:hover {
+  background: #193524;
+  border-color: #4b8c63;
+}
+
+.knowledge-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.knowledge-empty {
+  padding: 14px;
+  border: 1px dashed #26343b;
+  border-radius: 10px;
+  color: #687983;
+  font-size: 12px;
+  text-align: center;
+}
+
+.knowledge-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #202e35;
+  border-radius: 10px;
+  background: #101a1f;
+}
+
+.knowledge-item-info {
+  min-width: 0;
+}
+
+.knowledge-item-name {
+  overflow: hidden;
+  color: #c8d5da;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knowledge-item-meta {
+  margin-top: 4px;
+  color: #687983;
+  font-size: 11px;
+}
+
+.knowledge-remove-button {
+  flex-shrink: 0;
+  border: 1px solid #553838;
+  border-radius: 7px;
+  background: transparent;
+  color: #ffaaaa;
+  padding: 7px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.knowledge-remove-button:hover {
+  background: #291818;
+}
+
+@media (max-width: 600px) {
+  .knowledge-panel {
+    padding: 14px;
+  }
+
+  .knowledge-header {
+    align-items: flex-start;
+  }
+
+  .knowledge-header p {
+    max-width: 190px;
+    line-height: 1.5;
+  }
+
+  .knowledge-upload-button {
+    padding: 9px 11px;
+  }
+}
