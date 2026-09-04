@@ -18,6 +18,16 @@ const importInput = document.getElementById("importInput");
 
 const conversationCount = document.getElementById("conversationCount");
 const storageSize = document.getElementById("storageSize");
+const knowledgeInput = document.getElementById("knowledgeInput");
+const knowledgeList = document.getElementById("knowledgeList");
+
+const KNOWLEDGE_STORAGE_KEY = "aura_knowledge_v1";
+
+let knowledgeFiles = loadKnowledge();
+const imageInput = document.getElementById("imageInput");
+const imagePreview = document.getElementById("imagePreview");
+
+let selectedImage = null;
 const STORAGE_KEY = "aura_conversations";
 const OLD_STORAGE_KEY = "aura_conversation";
 
@@ -509,16 +519,21 @@ async function requestAURA() {
     body: JSON.stringify({
       messages: conversation.messages,
       knowledge: getKnowledgeContext(),
+      image: selectedImage,
     }),
   });
 
-  const data = await response.json();
-
   if (!response.ok) {
-    throw new Error(data.error || "Something went wrong");
+    throw new Error("AURA API request failed");
   }
 
-  return data.reply || "I didn't receive a response.";
+  const data = await response.json();
+
+  if (!data.reply) {
+    throw new Error("AURA returned an empty response");
+  }
+
+  return data.reply;
 }
 
 async function generateResponse() {
