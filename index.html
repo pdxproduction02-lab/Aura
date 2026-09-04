@@ -69,10 +69,37 @@
           </div>
 
           <div class="welcome" id="welcome">
-            <h1>Hello. I'm AURA.</h1>
-            <p>What are we building today?</p>
-          </div>
+  <h1>Hello. I'm AURA.</h1>
+  <p>What are we building today?</p>
+</div>
 
+<section class="knowledge-panel">
+  <div class="knowledge-header">
+    <div>
+      <h2>Knowledge</h2>
+      <p>Give AURA information it can use in this browser.</p>
+    </div>
+
+    <label
+      for="knowledgeInput"
+      class="knowledge-upload-button"
+    >
+      + Add File
+    </label>
+
+    <input
+      id="knowledgeInput"
+      type="file"
+      accept=".txt,text/plain"
+      hidden
+    />
+  </div>
+
+  <div
+    id="knowledgeList"
+    class="knowledge-list"
+  ></div>
+</section>
           <div class="chat" id="chat"></div>
 
           <div class="input-area">
